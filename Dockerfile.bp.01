@@ -1,0 +1,29 @@
+FROM alpine:3.7
+RUN apk update
+RUN apk add curl wget
+RUN apk --update add supervisor && mkdir /etc/supervisor.d/
+RUN cd /tmp
+RUN wget --no-check-certificate https://releases.hashicorp.com/consul-template/0.19.4/consul-template_0.19.4_linux_amd64.zip
+RUN unzip consul-template_0.19.4_linux_amd64.zip
+RUN mv consul-template /usr/bin/
+RUN rm consul-template_0.19.4_linux_amd64.zip
+ADD vault_init.sh .
+RUN chmod 755 vault_init.sh
+
+RUN adduser jasiu -D
+
+ADD vault-consul-template.ini /etc/supervisor.d/
+RUN chown -R jasiu:jasiu /etc/supervisor.d/
+
+ADD supervisord.conf /tmp/supervisord.conf
+RUN chown jasiu:jasiu /tmp/supervisord.conf
+RUN chmod 644 /tmp/supervisord.conf
+
+#RUN touch /tmp/supervisord.log
+#RUN chown jasiu:jasiu /tmp/supervisord.log
+#RUN chmod 666 /tmp/supervisord.log
+
+#CMD tail -f /dev/null
+CMD /usr/bin/supervisord -u jasiu -n -c /tmp/supervisord.conf -l /tmp/supervisord.log -j /tmp/supervisord.pid
+
+
