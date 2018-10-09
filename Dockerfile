@@ -1,17 +1,4 @@
 FROM alpine:3.7
-#-----------------------supervisord--------------------------------------------------------------
-RUN apk update
-RUN apk --update add supervisor && mkdir /etc/supervisor.d/
-RUN adduser supervisorduser -D
-RUN chown -R supervisorduser:supervisorduser /etc/supervisor.d/
-ADD supervisord.conf /tmp/supervisord.conf
-RUN chown supervisorduser:supervisorduser /tmp/supervisord.conf
-RUN chmod 644 /tmp/supervisord.conf
-ADD fake-service-supervisord.ini /etc/supervisor.d/
-
-#CMD tail -f /dev/null
-#CMD /usr/bin/supervisord -u supervisorduser -n -c /tmp/supervisord.conf -l /tmp/supervisord.log -j /tmp/supervisord.pid
-
 
 
 #-----------------------nginx--------------------------------------------------------------
@@ -167,12 +154,23 @@ RUN mkdir /var/cache/nginx/uwsgi_temp && chmod g+rwx /var/cache/nginx/uwsgi_temp
 RUN mkdir /var/cache/nginx/scgi_temp && chmod g+rwx /var/cache/nginx/scgi_temp 
 RUN chmod -R g+rwx /var/run /usr/share/nginx/html
 
+#-----------------------supervisord--------------------------------------------------------------
+RUN apk update
+RUN apk --update add supervisor 
+RUN mkdir /etc/supervisor.d/ && chmod g+rwx /etc/supervisor.d/
+RUN mkdir /etc/supervisor.conf && chmod g+rwx /etc/supervisor.conf
+ADD supervisord.conf /etc/supervisor.conf/
+RUN chmod g+rwx /var/log 
+RUN chmod g+rwx /run
+ADD nginx.ini /etc/supervisor.d/
+
+#poprawny CMD dla tej sekcji: CMD /usr/bin/supervisord  -n -c /etc/supervisor.conf/supervisord.conf -j /run/supervisord.pid
 
 #-----------------final steps-----------------------------------------------------------------------
 STOPSIGNAL SIGQUIT
 
-#CMD /usr/bin/supervisord -n
-#CMD tail -f /dev/null
-CMD hostname  > /usr/share/nginx/html/index.html && nginx -g "daemon off;" 
+#klasyczne wywolanie nginx bez supervisora: CMD hostname  > /usr/share/nginx/html/index.html && nginx -g "daemon off;" 
+#puste CMD: CMD tail -f /dev/null
+# w srodku kontenera obsluga supervisora: supervisorctl -c /etc/supervisor.conf/supervisord.conf
 
-
+CMD hostname  > /usr/share/nginx/html/index.html && /usr/bin/supervisord  -n -c /etc/supervisor.conf/supervisord.conf -j /run/supervisord.pid
