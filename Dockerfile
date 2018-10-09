@@ -153,11 +153,19 @@ COPY nginx.conf /etc/nginx/nginx.conf
 
 EXPOSE 8080
 
-RUN mkdir /var/cache/nginx/client_temp/ && chown -R nginx /var/cache/nginx/client_temp/
-RUN mkdir /var/cache/nginx/proxy_temp &&chown -R nginx /var/cache/nginx/proxy_temp 
-RUN mkdir /var/cache/nginx/fastcgi_temp && chown -R nginx /var/cache/nginx/fastcgi_temp 
-RUN mkdir /var/cache/nginx/uwsgi_temp && chown -R nginx /var/cache/nginx/uwsgi_temp  
-RUN mkdir /var/cache/nginx/scgi_temp && chown -R nginx /var/cache/nginx/scgi_temp 
+#https://torstenwalter.de/openshift/nginx/2017/08/04/nginx-on-openshift.html
+#By default, OpenShift Container Platform runs containers using an arbitrarily assigned user ID. This provides additional security 
+#against processes escaping the container due to a container engine vulnerability and thereby achieving escalated permissions on the host node.
+#For an image to support running as an arbitrary user, directories and files that may be written to by processes in the image 
+#should be owned by the root group and be read/writable by that group. Files to be executed should also have group execute permissions.
+#RUN chmod -R g+rwx /var/cache/nginx /var/run /var/log/nginx
+
+RUN mkdir /var/cache/nginx/client_temp/ && chmod g+rwx /var/cache/nginx/client_temp/
+RUN mkdir /var/cache/nginx/proxy_temp && chmod g+rwx /var/cache/nginx/proxy_temp 
+RUN mkdir /var/cache/nginx/fastcgi_temp && chmod g+rwx /var/cache/nginx/fastcgi_temp 
+RUN mkdir /var/cache/nginx/uwsgi_temp && chmod g+rwx /var/cache/nginx/uwsgi_temp  
+RUN mkdir /var/cache/nginx/scgi_temp && chmod g+rwx /var/cache/nginx/scgi_temp 
+RUN chmod -R g+rwx /var/run /usr/share/nginx/html
 
 
 #-----------------final steps-----------------------------------------------------------------------
@@ -165,6 +173,6 @@ STOPSIGNAL SIGQUIT
 
 #CMD /usr/bin/supervisord -n
 #CMD tail -f /dev/null
-CMD hostname  > /tmp/index.html && nginx -g "daemon off;" 
+CMD hostname  > /usr/share/nginx/html/index.html && nginx -g "daemon off;" 
 
 
