@@ -1,5 +1,5 @@
 FROM alpine:3.7
-
+#-----------------------supervisord--------------------------------------------------------------
 RUN apk update
 RUN apk --update add supervisor && mkdir /etc/supervisor.d/
 RUN adduser supervisorduser -D
@@ -14,6 +14,7 @@ ADD fake-service-supervisord.ini /etc/supervisor.d/
 
 
 
+#-----------------------nginx--------------------------------------------------------------
 ENV NGINX_VERSION 1.12.0
 
 RUN GPG_KEYS=B0F4253373F8F6F510D42178520A9993A1C052F8 \
@@ -140,30 +141,30 @@ RUN GPG_KEYS=B0F4253373F8F6F510D42178520A9993A1C052F8 \
         && apk del .build-deps \
         && apk del .gettext \
         && mv /tmp/envsubst /usr/local/bin/ \
-        \
+        \ 
         # forward request and error logs to docker log collector
         && ln -sf /proc/1/fd/1 /var/log/nginx/access.log \
         && ln -sf /proc/1/fd/1 /var/log/nginx/error.log
 
 
-
-COPY api-gw_init.sh .
-RUN chmod 755 api-gw_init.sh
-
+#------------------nginx openshift customization----------------------------------------------------------------------
+COPY default.conf /etc/nginx/conf.d/default.conf
 COPY nginx.conf /etc/nginx/nginx.conf
-COPY nginx.vh.default.conf /etc/nginx/conf.d/default.conf
-COPY nginx.ctmpl /tmp/nginx.ctmpl
-COPY nginx.ini /etc/supervisor.d/nginx.ini
-COPY ct.ini.tmpl /tmp/ct.ini.tmpl
-COPY index.html /usr/share/nginx/html/index.html
-RUN ln -s   /etc/nginx/conf.d/default.conf  /usr/share/nginx/html/default.txt
-RUN ln -s   /etc/hostname  /usr/share/nginx/html/hostname.txt
 
-EXPOSE 80
+EXPOSE 8080
 
+RUN mkdir /var/cache/nginx/client_temp/ && chown -R nginx /var/cache/nginx/client_temp/
+RUN mkdir /var/cache/nginx/proxy_temp &&chown -R nginx /var/cache/nginx/proxy_temp 
+RUN mkdir /var/cache/nginx/fastcgi_temp && chown -R nginx /var/cache/nginx/fastcgi_temp 
+RUN mkdir /var/cache/nginx/uwsgi_temp && chown -R nginx /var/cache/nginx/uwsgi_temp  
+RUN mkdir /var/cache/nginx/scgi_temp && chown -R nginx /var/cache/nginx/scgi_temp 
+
+
+#-----------------final steps-----------------------------------------------------------------------
 STOPSIGNAL SIGQUIT
 
 #CMD /usr/bin/supervisord -n
+#CMD tail -f /dev/null
+CMD hostname  > /tmp/index.html && nginx -g "daemon off;" 
 
 
-CMD tail -f /dev/null
