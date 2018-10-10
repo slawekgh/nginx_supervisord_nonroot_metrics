@@ -6,4 +6,4 @@
 + instalacja supervisord 
 + modyfikacja supervisord pod openshift
 + nginx jako service supervisora 
-+ hostname serwowany na 8080 
++ DZIALANIE KONTENERA: hostname kontenera serwowany via nginx na 8080 
