@@ -2,7 +2,7 @@
 
 alpine
 
-nginx pod openshift
++ nginx pod openshift
 
-supervisord pod openshift 
++ supervisord pod openshift 
 
