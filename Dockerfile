@@ -4,6 +4,8 @@ FROM alpine:3.7
 #-----------------------nginx--------------------------------------------------------------
 ENV NGINX_VERSION 1.12.0
 
+COPY nginx-module-vts /tmp/nginx-module-vts
+
 RUN GPG_KEYS=B0F4253373F8F6F510D42178520A9993A1C052F8 \
         && CONFIG="\
                 --prefix=/etc/nginx \
@@ -49,6 +51,7 @@ RUN GPG_KEYS=B0F4253373F8F6F510D42178520A9993A1C052F8 \
                 --with-compat \
                 --with-file-aio \
                 --with-http_v2_module \
+                --add-module=/tmp/nginx-module-vts\
         " \
         && addgroup -S nginx \
         && adduser -D -S -h /var/cache/nginx -s /sbin/nologin -G nginx nginx \
@@ -133,12 +136,22 @@ RUN GPG_KEYS=B0F4253373F8F6F510D42178520A9993A1C052F8 \
         && ln -sf /proc/1/fd/1 /var/log/nginx/access.log \
         && ln -sf /proc/1/fd/1 /var/log/nginx/error.log
 
+#------------------nginx-vts-exporter---------------------------------------------------------------------------------
+RUN apk update
+RUN apk --update add wget
+RUN wget https://github.com/hnlq715/nginx-vts-exporter/releases/download/v0.10.3/nginx-vts-exporter-0.10.3.linux-amd64.tar.gz
+RUN tar xzf nginx-vts-exporter-0.10.3.linux-amd64.tar.gz
+RUN mv nginx-vts-exporter-0.10.3.linux-amd64/nginx-vts-exporter /bin/
+RUN rm -rf nginx-vts-exporter-0.10.3.linux-amd64 nginx-vts-exporter-0.10.3.linux-amd64.tar.gz 
+
+# z reki: nginx-vts-exporter -nginx.scrape_uri=http://localhost:8080/status/format/json
 
 #------------------nginx openshift customization----------------------------------------------------------------------
 COPY default.conf /etc/nginx/conf.d/default.conf
 COPY nginx.conf /etc/nginx/nginx.conf
 
 EXPOSE 8080
+EXPOSE 9913
 
 #https://torstenwalter.de/openshift/nginx/2017/08/04/nginx-on-openshift.html
 #By default, OpenShift Container Platform runs containers using an arbitrarily assigned user ID. This provides additional security 
@@ -163,6 +176,7 @@ ADD supervisord.conf /etc/supervisor.conf/
 RUN chmod g+rwx /var/log 
 RUN chmod g+rwx /run
 ADD nginx.ini /etc/supervisor.d/
+ADD vts-exporter.ini /etc/supervisor.d/
 
 #poprawny CMD dla tej sekcji: CMD /usr/bin/supervisord  -n -c /etc/supervisor.conf/supervisord.conf -j /run/supervisord.pid
 
